@@ -9,6 +9,7 @@ app.use(express.json());
 
 const uri = "mongodb://localhost:27017";
 
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -23,6 +24,7 @@ const mongodbRun = async () => {
     const database = client.db("touristSport");
     const usersCollection = database.collection("users");
     const usersDataCollection = database.collection("usersData");
+    const countryDataCollection = database.collection("country");
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -71,6 +73,12 @@ const mongodbRun = async () => {
       }
     });
 
+    app.get("/country", async(req,res)=>{
+      const countryData = countryDataCollection.find({})
+      const result = await countryData.toArray()
+      res.send(result)
+    });
+
     app.get("/spot/:sliceStart/:sliceEnd", async (req, res) => {
       const { sliceStart, sliceEnd } = req.params;
       const query = {};
@@ -80,7 +88,6 @@ const mongodbRun = async () => {
       res.send(result);
     });
 
-    // sports_add_by_user_email
     app.get("/spot/data/:key/:value", async (req, res) => {
       const { key, value } = req.params;
       const query = { [key]: value };
