@@ -9,7 +9,6 @@ app.use(express.json());
 
 const uri = "mongodb://localhost:27017";
 
-
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -73,10 +72,27 @@ const mongodbRun = async () => {
       }
     });
 
-    app.get("/country", async(req,res)=>{
-      const countryData = countryDataCollection.find({})
-      const result = await countryData.toArray()
-      res.send(result)
+    app.get("/country", async (req, res) => {
+      const countryData = countryDataCollection.find({});
+      const result = await countryData.toArray();
+      res.send(result);
+    });
+
+    app.get("/country/random/:max", async (req, res) => {
+      const { max } = req.params;
+      console.log(max);
+      const countryRawData = countryDataCollection.find({});
+      const countryData = await countryRawData.toArray();
+      const totalCountry = countryData[0].country;
+      const chosenCountry =
+        totalCountry[Math.floor(Math.random() * (totalCountry.length - 0)) + 0];
+      console.log(chosenCountry);
+
+      const query = { country_Name: chosenCountry };
+      const cursor = usersDataCollection.find(query);
+      const tempResult = await cursor.toArray();
+      const result = tempResult.slice(0, max);
+      res.send({ chosenCountry, result });
     });
 
     app.get("/spot/:sliceStart/:sliceEnd", async (req, res) => {
