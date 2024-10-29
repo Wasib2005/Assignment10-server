@@ -23,7 +23,7 @@ const mongodbRun = async () => {
     const database = client.db("touristSport");
     const usersCollection = database.collection("users");
     const usersDataCollection = database.collection("usersData");
-    const countryDataCollection = database.collection("country");
+    const countryDataCollection = database.collection("countryName");
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -37,6 +37,26 @@ const mongodbRun = async () => {
       const cursor = usersDataCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    app.get("/spot/:sortBy/:sortValueUrl/:country", async (req, res) => {
+      const { sortBy, sortValueUrl, country } = req.params;
+      const sortValue = parseInt(sortValueUrl);
+      if (sortValue === 1 || sortValue === -1) {
+        let query = {};
+        if (country === "all" || country === "All") {
+        } else {
+          query = { country_Name: country };
+        }
+        const options = {
+          sort: { [sortBy]: sortValue },
+        };
+        const cursor = usersDataCollection.find(query, options);
+        const result = await cursor.toArray();
+        res.send(result);
+      } else {
+        res.send("sort value is either 1 or -1");
+      }
     });
 
     app.get("/random/:howManyUrl", async (req, res) => {
@@ -74,16 +94,16 @@ const mongodbRun = async () => {
 
     app.get("/country", async (req, res) => {
       const countryData = countryDataCollection.find({});
-      const result = await countryData.toArray();
+      const tempResult = await countryData.toArray();
+      const result = tempResult[0].Country.sort();
       res.send(result);
     });
 
     app.get("/country/random/:max", async (req, res) => {
       const { max } = req.params;
-      console.log(max);
       const countryRawData = countryDataCollection.find({});
       const countryData = await countryRawData.toArray();
-      const totalCountry = countryData[0].country;
+      const totalCountry = countryData[0].Country;
       const chosenCountry =
         totalCountry[Math.floor(Math.random() * (totalCountry.length - 0)) + 0];
       console.log(chosenCountry);
