@@ -25,11 +25,24 @@ const mongodbRun = async () => {
     const usersDataCollection = database.collection("usersData");
     const countryDataCollection = database.collection("countryName");
 
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      console.log(user);
-      const result = await usersCollection.insertOne(user);
+    app.get("/users/:userEmail", async (req, res) => {
+      const { userEmail } = req.params;
+      console.log(userEmail);
       res.send(result);
+    });
+
+    app.post("/createUsers", async (req, res) => {
+      const userData = req.body;
+      const { userEmail } = userData;
+      const checkUser = await usersCollection.findOne({ userEmail });
+      console.log(checkUser);
+      if (checkUser) {
+        res.send("User Exists");
+      } else {
+        const result = await usersCollection.insertOne(userData);
+        console.log(result);
+        res.send(result);
+      }
     });
 
     app.get("/spot", async (req, res) => {
@@ -95,7 +108,9 @@ const mongodbRun = async () => {
     app.get("/country", async (req, res) => {
       const countryData = countryDataCollection.find({});
       const tempResult = await countryData.toArray();
+      console.log("tempResult", tempResult);
       const result = tempResult[0].Country.sort();
+      console.log("result", result);
       res.send(result);
     });
 
