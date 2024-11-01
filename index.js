@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -37,11 +37,11 @@ const mongodbRun = async () => {
       const checkUser = await usersCollection.findOne({ userEmail });
       console.log(checkUser);
       if (checkUser) {
-        res.send("User Exists");
+        res.send({ userStatus: "User Exists" });
       } else {
         const result = await usersCollection.insertOne(userData);
         console.log(result);
-        res.send(result);
+        res.send({ userStatus: "User Created" });
       }
     });
 
@@ -139,12 +139,37 @@ const mongodbRun = async () => {
       res.send(result);
     });
 
-    app.get("/spot/data/:key/:value", async (req, res) => {
+    app.get("/spotData/:key/:value", async (req, res) => {
       const { key, value } = req.params;
-      const query = { [key]: value };
-      const cursor = usersDataCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
+      if (key === "_id") {
+        const query = { [key]: new ObjectId(value) };
+        const cursor = usersDataCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+        console.log(result);
+      } else {
+        const query = { [key]: value };
+        const cursor = usersDataCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      }
+    });
+
+    app.post("/UploadSpotData", async (req, res) => {
+      const userData = req.body;
+      const { tourists_spot_name, user_email } = userData;
+
+      const query = { tourists_spot_name, user_email };
+      const cursor = usersDataCollection.findOne(query);
+      const dataFromDatabase = await cursor;
+      console.log(dataFromDatabase);
+      if (dataFromDatabase) {
+        // if(dataFromDatabase.user_email===tourists_spot_name)
+        res.send({ error: "Already Exists" });
+      } else {
+        const result = await usersDataCollection.insertOne(userData);
+        res.send(result);
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
