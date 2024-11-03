@@ -1,4 +1,6 @@
+require("dotenv").config();
 const express = require("express");
+
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
@@ -7,8 +9,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const uri = "mongodb://localhost:27017";
-
+const uri = `mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@cluster0.gjjj5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -34,19 +35,17 @@ const mongodbRun = async () => {
       const userData = req.body;
       const { userEmail } = userData;
       const checkUser = await usersCollection.findOne({ userEmail });
-      console.log(checkUser);
       if (checkUser) {
         res.send({ userStatus: "User Exists" });
       } else {
         const result = await usersCollection.insertOne(userData);
-        console.log(result);
         res.send({ userStatus: "User Created" });
       }
     });
 
     app.patch("/updateUserProfile", async (req, res) => {
       const { updateData, userEmail } = req.body;
-      console.log(updateData, userEmail);
+
       const filter = { user_email: userEmail };
       const options = { upsert: true };
       const updateDoc = {
@@ -127,7 +126,7 @@ const mongodbRun = async () => {
     app.get("/country", async (req, res) => {
       const countryData = countryDataCollection.find({});
       const tempResult = await countryData.toArray();
-      const result = tempResult[0].Country.sort();
+      const result = tempResult[0]?.Country?.sort();
       res.send(result);
     });
 
@@ -135,9 +134,11 @@ const mongodbRun = async () => {
       const { max } = req.params;
       const countryRawData = countryDataCollection.find({});
       const countryData = await countryRawData.toArray();
-      const totalCountry = countryData[0].Country;
+      const totalCountry = countryData[0]?.Country;
       const chosenCountry =
-        totalCountry[Math.floor(Math.random() * (totalCountry.length - 0)) + 0];
+        totalCountry[
+          Math.floor(Math.random() * (totalCountry?.length - 0)) + 0
+        ];
       const query = { country_Name: chosenCountry };
       const cursor = usersDataCollection.find(query);
       const tempResult = await cursor.toArray();
@@ -185,7 +186,6 @@ const mongodbRun = async () => {
       const countryDataFromDatabase = await cursor2;
       const allCountry = countryDataFromDatabase?.Country;
       let newAllCountry = [];
-      console.log(allCountry.includes(country_Name), country_Name);
 
       if (dataFromDatabase) {
         res.send({ error: "Already Exists" });
@@ -193,9 +193,8 @@ const mongodbRun = async () => {
         const result = await usersDataCollection.insertOne(userData);
         res.send(result);
       }
-      if (!allCountry.includes(country_Name)) {
+      if (!allCountry?.includes(country_Name)) {
         newAllCountry = [...allCountry, country_Name];
-        console.log(allCountry);
         const filter = { _id: new ObjectId("67201674b67670a57a726318") };
         const options = { upsert: true };
         const updateCountry = {
@@ -208,13 +207,11 @@ const mongodbRun = async () => {
           updateCountry,
           options
         );
-        console.log(result);
       }
     });
 
     app.patch("/UpdateSpotData", async (req, res) => {
       const { id, tourists_spot_data } = req.body;
-      console.log(id, tourists_spot_data);
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDoc = {
