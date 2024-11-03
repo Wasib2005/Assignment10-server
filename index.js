@@ -27,7 +27,6 @@ const mongodbRun = async () => {
 
     app.get("/users/:userEmail", async (req, res) => {
       const { userEmail } = req.params;
-      console.log(userEmail);
       res.send(result);
     });
 
@@ -43,6 +42,26 @@ const mongodbRun = async () => {
         console.log(result);
         res.send({ userStatus: "User Created" });
       }
+    });
+
+    app.patch("/updateUserProfile", async (req, res) => {
+      const { updateData, userEmail } = req.body;
+      console.log(updateData, userEmail);
+      const filter = { user_email: userEmail };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: { user_name: updateData.userName },
+      };
+      const result1 = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      const result2 = await usersDataCollection.updateMany(filter, updateDoc);
+      res.send({
+        result1: `${result1.matchedCount} document(s) matched the filter, updated ${result1.modifiedCount} document(s)`,
+        result2: `Updated ${result2.modifiedCount} documents`,
+      });
     });
 
     app.get("/spot", async (req, res) => {
@@ -108,9 +127,7 @@ const mongodbRun = async () => {
     app.get("/country", async (req, res) => {
       const countryData = countryDataCollection.find({});
       const tempResult = await countryData.toArray();
-      console.log("tempResult", tempResult);
       const result = tempResult[0].Country.sort();
-      console.log("result", result);
       res.send(result);
     });
 
@@ -121,13 +138,15 @@ const mongodbRun = async () => {
       const totalCountry = countryData[0].Country;
       const chosenCountry =
         totalCountry[Math.floor(Math.random() * (totalCountry.length - 0)) + 0];
-      console.log(chosenCountry);
-
       const query = { country_Name: chosenCountry };
       const cursor = usersDataCollection.find(query);
       const tempResult = await cursor.toArray();
       const result = tempResult.slice(0, max);
-      res.send({ chosenCountry, result });
+      if (tempResult.length !== 0) {
+        res.send({ chosenCountry, result });
+      } else {
+        res.send([]);
+      }
     });
 
     app.get("/spot/:sliceStart/:sliceEnd", async (req, res) => {
@@ -146,7 +165,6 @@ const mongodbRun = async () => {
         const cursor = usersDataCollection.find(query);
         const result = await cursor.toArray();
         res.send(result);
-        console.log(result);
       } else {
         const query = { [key]: value };
         const cursor = usersDataCollection.find(query);
@@ -157,18 +175,71 @@ const mongodbRun = async () => {
 
     app.post("/UploadSpotData", async (req, res) => {
       const userData = req.body;
-      const { tourists_spot_name, user_email } = userData;
-
+      const { tourists_spot_name, user_email, country_Name } = userData;
       const query = { tourists_spot_name, user_email };
       const cursor = usersDataCollection.findOne(query);
       const dataFromDatabase = await cursor;
-      console.log(dataFromDatabase);
+
+      const query2 = {};
+      const cursor2 = countryDataCollection.findOne(query2);
+      const countryDataFromDatabase = await cursor2;
+      const allCountry = countryDataFromDatabase?.Country;
+      let newAllCountry = [];
+      console.log(allCountry.includes(country_Name), country_Name);
+
       if (dataFromDatabase) {
-        // if(dataFromDatabase.user_email===tourists_spot_name)
         res.send({ error: "Already Exists" });
       } else {
         const result = await usersDataCollection.insertOne(userData);
         res.send(result);
+      }
+      if (!allCountry.includes(country_Name)) {
+        newAllCountry = [...allCountry, country_Name];
+        console.log(allCountry);
+        const filter = { _id: new ObjectId("67201674b67670a57a726318") };
+        const options = { upsert: true };
+        const updateCountry = {
+          $set: {
+            Country: newAllCountry,
+          },
+        };
+        const result = await countryDataCollection.updateOne(
+          filter,
+          updateCountry,
+          options
+        );
+        console.log(result);
+      }
+    });
+
+    app.patch("/UpdateSpotData", async (req, res) => {
+      const { id, tourists_spot_data } = req.body;
+      console.log(id, tourists_spot_data);
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: { ...tourists_spot_data },
+      };
+      const result = await usersDataCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send({
+        result: `${result.matchedCount} document matched the filter, updated ${result.modifiedCount} document`,
+      });
+    });
+
+    app.post("/deleteSpotData/:id/:userEmail", async (req, rec) => {
+      const { id, userEmail } = req.params;
+      const query = { _id: new ObjectId(id), user_email: userEmail };
+      const result = await usersDataCollection.deleteOne(query);
+      if (result.deletedCount === 1) {
+        rec.send({ result: "Successfully" });
+      } else {
+        rec.send({
+          result: "No documents",
+        });
       }
     });
 
